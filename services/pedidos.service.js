@@ -1,6 +1,18 @@
 import { config } from "../db.js";
 import pkg from "pg";
 const { Client } = pkg;
+import { Pedido } from "../models/pedidos.model.js";
+import { Plato } from "../models/platos.model.js";
+import platosService from "./platos.service.js";
+
+const getPedidos = async () => await Pedido.findAll();
+
+const getPedidoById = async (idPedido) => 
+    await Pedido.findAll({
+        where: {
+            id: idPedido
+        }
+    })
 
 const getPlatosByPedido = async (idPedido) => {
     const client = new Client(config);
@@ -38,88 +50,17 @@ const getPlatosByPedido = async (idPedido) => {
     }
 };
 
-const getPedidos = async () => {
-    const client = new Client(config);
-    await client.connect();
-
-    try {
-        const { rows } = await client.query("SELECT * FROM pedidos");
-
-        if (rows.length < 1) return [];
-
-        const result = await Promise.all(
-            rows.map(async (pedido) => {
-                const platos = await getPlatosByPedido(pedido.id);
-                return {
-                    ...pedido,
-                    platos,
-                };
-            })
-        );
-
-        await client.end();
-        return result;
-    } catch (error) {
-        await client.end();
-        throw error;
+const createPedido = async (pedido, platos) => {
+    for (let plato of platos) {
+        await platosService.getPlatoById(plato.id)
     }
-};
-
-const getPedidoById = async (id) => {
-    const client = new Client(config);
-    await client.connect();
-
-    try {
-        const { rows } = await client.query(
-            "SELECT * FROM pedidos WHERE id = $1",
-            [id]
-        );
-
-        if (rows.length < 1) return null;
-
-        const result = rows[0];
-
-        result.platos = await getPlatosByPedido(id);
-
-        await client.end();
-        return rows;
-    } catch (error) {
-        await client.end();
-        throw error;
-    }
-};
-
-const getPedidosByUser = async (idUsuario) => {
-    const client = new Client(config);
-    await client.connect();
-
-    try {
-        const { rows } = await client.query(
-            "SELECT * FROM pedidos WHERE id_usuario = $1",
-            [idUsuario]
-        );
-
-        if (rows.length < 1) return [];
-
-        const result = await Promise.all(
-            rows.map(async (pedido) => {
-                const platos = await getPlatosByPedido(pedido.id);
-                return {
-                    ...pedido,
-                    platos,
-                };
-            })
-        );
-
-        await client.end();
-        return result;
-    } catch (error) {
-        await client.end();
-        throw error;
-    }
-};
-
-const createPedido = async (idUsuario, platos) => {
+    Pedido.create({
+        id_usuario: pedido.id_usuario,
+        fecha: pedido.fecha,
+        estado: pedido.estado, 
+    })
+}
+const CreatePedido = async (idUsuario, platos) => {
     const client = new Client(config);
     await client.connect();
 
@@ -169,7 +110,8 @@ const createPedido = async (idUsuario, platos) => {
     }
 };
 
-const updatePedido = async (id, estado) => {
+const updatePedido = async (id, estado) => {};
+const UpdatePedido = async (id, estado) => {
     if (
         estado !== "aceptado" &&
         estado !== "en camino" &&
@@ -215,7 +157,7 @@ const deletePedido = async (id) => {
 export default {
     getPedidos,
     getPedidoById,
-    getPedidosByUser,
+    //getPedidosByUser,
     createPedido,
     updatePedido,
     deletePedido,
